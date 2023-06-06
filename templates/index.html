@@ -6,62 +6,126 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.2/leaflet.draw.css"/>
 
 </head>
 <body>
     <div id="map"></div>
     <div id="data" data-value="{{ data }}"></div>
 
-    <div id="filter-container" class="container mt-4">
+    <div id="filter-container">
         <form action="{{ url_for('filter_polygons') }}" method="post">
-            <div class="row">
-                <div class="col-md-4">
-                    <select id="state-select" name="state" class="form-select">
-                        <option value="All">All States</option>
-                        <!-- State options will be generated dynamically using JavaScript -->
-                    </select>
+          <div class="mb-3">
+            <label for="state-select" class="form-label">State:</label>
+            <select id="state-select" name="state" class="form-select">
+              <option value="All">All States</option>
+              <!-- State options will be generated dynamically using JavaScript -->
+            </select>
+          </div>
+      
+          <div class="mb-3">
+            <label for="district-select" class="form-label">District:</label>
+            <select id="district-select" name="district" class="form-select">
+              <option value="All">All Districts</option>
+              <!-- District options will be generated dynamically based on the selected state using JavaScript -->
+            </select>
+          </div>
+          <div class="mb-3">
+            <button type="submit" class="btn btn-primary">Filter</button>
+          </div>
+      
+          <div class="row">
+            <div class="col">
+              <div class="card">
+                <div class="card-header" id="polygons-list-heading">
+                  <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#polygons-list-collapse" aria-expanded="true" aria-controls="polygons-list-collapse">
+                    Change visibility of Polygons:
+                  </button>
                 </div>
-                <div class="col-md-4">
-                    <select id="district-select" name="district" class="form-select">
-                        <option value="All">All Districts</option>
-                        <!-- District options will be generated dynamically based on the selected state using JavaScript -->
-                    </select>
+                <div id="polygons-list-collapse" class="collapse show" aria-labelledby="polygons-list-heading">
+                  <div class="card-body" style="background-color: white;">
+                    <ul id="polygons-List"></ul>
+                  </div>
                 </div>
-                <div class="col-md-4">
-                    <button type="submit" class="btn btn-primary">Filter</button>
-                </div>
+              </div>
             </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <div class="card">
+                <div class="card-header" id="invalid-polygons-list-heading">
+                  <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#invalid-polygons-list-collapse" aria-expanded="true" aria-controls="invalid-polygons-list-collapse">
+                    Polygons not yet validated :
+                  </button>
+                </div>
+                <div id="invalid-polygons-list-collapse" class="collapse show" aria-labelledby="invalid-polygons-list-heading">
+                  <div class="card-body" style="background-color: white;">
+                    <ul id="invalid-polygons-list"></ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </form>
-    </div>
+      </div>
     
-    
-
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        
         // Initialize the Leaflet map
-        var map = L.map('map').setView([{{ center_lat }}, {{ center_lng }}], {{ zoom }});
+        
+        var map = L.map('map', {
+                zoomControl: false // Disable the default zoom control
+                }).setView([{{ center_lat }}, {{ center_lng }}], {{ zoom }});
+            // Create a feature group to store the drawn items
+            // Create a feature group to store the drawn items
+var drawnItems = new L.FeatureGroup();
+
+// Add the feature group to the map
+map.addLayer(drawnItems);
+
+// ...
+
+// Add the leaflet.draw plugin to the map
+var drawControl = new L.Control.Draw({
+  edit: {
+    featureGroup: drawnItems,
+    edit: {},
+    remove: {
+      skipMiddleMarkers: true
+    }
+  }
+});
 
 
+            L.control.zoom({
+                         position: 'topright'
+                        }).addTo(map);
         // Add the tile layer to the map
-        var defaultTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
-            maxZoom: 18
-        }).addTo(map);
+        // Define the satellite tile layer
+                var satelliteTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Imagery © <a href="https://www.arcgis.com/">ArcGIS</a>'
+                });
 
-        // Add the satellite tile layer to the map (initially hidden)
-        var satelliteTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Imagery © <a href="https://www.arcgis.com/">ArcGIS</a>'
-        });
+                // Define the street tile layer
+                var streetTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+                    maxZoom: 18
+                });
 
-        // Define a base layer group to switch between tile layers
-        var baseLayers = {
-            "Map View": defaultTileLayer,
-            "Satellite View": satelliteTileLayer
-        };
+                // Define a base layer group to switch between tile layers
+                var baseLayers = {
+                    "Satellite View": satelliteTileLayer,
+                    "Map View": streetTileLayer
+                };
 
-        // Add the base layer control to the map
-        L.control.layers(baseLayers).addTo(map);
+                // Set the satellite tile layer as the default layer
+                satelliteTileLayer.addTo(map);
+
+                // Add the base layer control to the map
+                L.control.layers(baseLayers).addTo(map);
 
         // Retrieve the data from the HTML data attribute
         var dataElement = document.getElementById('data');
@@ -166,14 +230,84 @@ function savePolygonValidation(farmerId, fieldId, mdoId) {
     xhr.send('farmer_id=' + farmerId + '&field_id=' + fieldId + '&mdo_id=' + mdoId + '&validation=' + validation);
 }
 
+// Function to send the updated coordinates to the server
 
+function saveCoordinates(updatedCoordinates, entry) {
+    // Retrieve the farmer ID and field ID from the entry object
+    var farmerId = entry.Farmer_ID;
+    var fieldId = entry['Field ID'];
+
+    // Create a JSON payload with the updated coordinates
+    var payload = {
+        coordinates: updatedCoordinates,
+        farmer_id: farmerId,
+        field_id: fieldId
+    };
+
+    // Send an AJAX request to the server to save the updated coordinates
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/save_coordinates', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            var response = JSON.parse(xhr.responseText);
+            if (response.status === 'success') {
+                console.log('Coordinates saved successfully.');
+            } else {
+                console.error('Failed to save coordinates.');
+            }
+        }
+    };
+    xhr.send(JSON.stringify(payload));
+}
+var polygonsList = document.getElementById('polygons-List');
+var invalidPolygonsList = document.getElementById('invalid-polygons-list');
         // Iterate over the data and create polylines on the map
         if (data) {
     data.forEach(function(entry) {
         var points = entry.Points.map(function(point) {
             return [point.Latitude, point.Longitude];
         });
-        var polygon = L.polygon(points, { color: 'red', fillOpacity: 0.4 }).addTo(map);
+
+        if (entry.polygon_validation !== 'Good Polygon' && entry.polygon_validation !== 'Bad but fixable' && entry.polygon_validation !== 'Bad not fixable') {
+                    // Create a list item for the invalid polygon
+                    var listItem = document.createElement('li');
+                    
+                    // Create a hyperlink to the polygon center with zoom
+                    var hyperlink = document.createElement('a');
+                    hyperlink.href = '#';
+                    hyperlink.textContent = 'Field ID: ' + entry['Field ID'] + ', Farmer ID: ' + entry.Farmer_ID;
+                    hyperlink.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        map.setView(polygon.getBounds().getCenter(), 15);
+                    });
+
+                    // Append the hyperlink to the list item
+                    listItem.appendChild(hyperlink);
+
+                    // Append the list item to the invalid polygons list
+                    invalidPolygonsList.appendChild(listItem);
+                }
+        var fillColor = 'transparent';
+        var outlineColor = 'red';
+
+        // Check the polygon validation value and update the fill and outline colors accordingly
+        if (entry.polygon_validation === 'Good Polygon') {
+            fillColor = 'green';
+            outlineColor = 'darkgreen';
+        } else if (entry.polygon_validation === 'Bad but fixable') {
+            fillColor = 'yellow';
+            outlineColor = 'darkgoldenrod';
+        } else if (entry.polygon_validation === 'Bad not fixable') {
+            fillColor = 'red';
+            outlineColor = 'darkred';
+        }
+
+        var polygon = L.polygon(points, { color: outlineColor, fillColor: fillColor, fillOpacity: 0.4, editable: true }).addTo(drawnItems);
+
+
+        // Customize the editing icon
+
         // Add any other necessary properties to the polygon
         polygon.properties = {
             state: entry.State,
@@ -183,8 +317,12 @@ function savePolygonValidation(farmerId, fieldId, mdoId) {
             mdoId: entry.MDO_ID,
         };
 
-        // Create the popup content
-        var popupContent = `
+        
+      
+
+// Append the buttons to the popup content
+        var popupContentElement = document.createElement('div');
+        popupContentElement.innerHTML = `
             <div>
                 <p><strong>State:</strong> ${entry.State}</p>
                 <p><strong>District:</strong> ${entry.District}</p>
@@ -199,12 +337,55 @@ function savePolygonValidation(farmerId, fieldId, mdoId) {
                         <option value="Bad not fixable">Bad not fixable</option>
                     </select>
                 </div>
-                <button class="btn btn-primary" onclick="savePolygonValidation('${entry.Farmer_ID}', '${entry['Field ID']}', '${entry.MDO_ID}')">Save</button>
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="savePolygonValidation('${entry.Farmer_ID}', '${entry['Field ID']}', '${entry.MDO_ID}')">Save</button>
+                    <div id="new-vertices-buttons">
+                        <!-- Buttons will be appended here -->
+                    </div>
+                </div>
             </div>
         `;
+            // Create a list item for the polygon with checkbox
+        var listItem = document.createElement('li');
+
+        // Create a checkbox for the polygon
+        var checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = true; // Checkbox is checked by default
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                // Show the polygon
+                polygon.addTo(drawnItems);
+            } else {
+                // Hide the polygon
+                drawnItems.removeLayer(polygon);
+            }
+        });
+
+        // Create a label for the checkbox with field and farmer IDs
+        var label = document.createElement('label');
+        label.textContent = 'Field ID: ' + entry['Field ID'] + ', Farmer ID: ' + entry.Farmer_ID;
+        label.insertBefore(checkbox, label.firstChild);
+
+        // Append the label to the list item
+        listItem.appendChild(label);
+
+        // Append the list item to the polygons list
+        polygonsList.appendChild(listItem);
+        // Create the "Save New Vertices" button
+        var saveButton = document.createElement('button');
+        saveButton.innerHTML = 'Save New Vertices';
+        saveButton.classList.add('btn', 'btn-primary');
+        saveButton.onclick = function() {
+            saveCoordinates(polygon.getLatLngs()[0], entry);
+        };
+        popupContentElement.querySelector('#new-vertices-buttons').appendChild(saveButton);
+
+      
+      
 
         // Attach the popup to the polygon
-        polygon.bindPopup(popupContent);
+        polygon.bindPopup(popupContentElement);
 
         // Attach event listeners to the polygon
         polygon.on('click', function(e) {
@@ -214,12 +395,21 @@ function savePolygonValidation(farmerId, fieldId, mdoId) {
             console.log('District:', properties.district);
             // Handle other actions as needed
         });
+
+      
+
+       
+
+        
     });
 } else {
     console.error('No data found.');
 }
+
         
     </script>
+  
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
 </body>
 </html>

@@ -1,0 +1,5 @@
+->remove the fill colour for the ones which arent labelled yet.done
+->fill colour based on validation.done
+->add the feature to move the vertices
+->mdo based filter
+->list of fields which arent labelled yet

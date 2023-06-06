@@ -11,6 +11,7 @@ def read_excel_data():
     df = pd.read_excel('Kushiluv- Polygon data(internship).xlsx')
     df = df.where(pd.notnull(df), None)
     # Convert the DataFrame to a list of dictionaries
+    df = df.fillna('')
     data = df.to_dict(orient='records')
 
     # Update the coordinates column
@@ -94,6 +95,19 @@ def save_polygon_validation():
 
     # Return the JSON response
     return jsonify({'data': json_data, 'status': 'success'})
+@app.route('/save_coordinates', methods=['POST'])
+def save_coordinates():
+    data = request.json
+    coordinates = data['coordinates']
+    farmer_id = data['farmer_id']
+    field_id =  data['field_id']
+    
+    # Process the updated coordinates here
+    # Replace the original coordinates in the Excel file
+    print(coordinates)
+    print(farmer_id)
+    print(field_id)
+    return {'status': 'success'}
 
 def calculate_center_coordinates(data, state=None, district=None):
     
