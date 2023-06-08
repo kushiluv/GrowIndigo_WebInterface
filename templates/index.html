@@ -31,24 +31,14 @@
             </select>
           </div>
           <div class="mb-3">
+            <label for="mdo-select" class="form-label">MDO ID:</label>
+            <select id="mdo-select" name="mdo_id" class="form-select">
+                <option value="All">All MDO IDs</option>
+                <!-- MDO ID options will be generated dynamically using JavaScript -->
+            </select>
+        </div>
+          <div class="mb-3">
             <button type="submit" class="btn btn-primary">Filter</button>
-          </div>
-      
-          <div class="row">
-            <div class="col">
-              <div class="card">
-                <div class="card-header" id="polygons-list-heading">
-                  <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#polygons-list-collapse" aria-expanded="true" aria-controls="polygons-list-collapse">
-                    Change visibility of Polygons:
-                  </button>
-                </div>
-                <div id="polygons-list-collapse" class="collapse show" aria-labelledby="polygons-list-heading">
-                  <div class="card-body" style="background-color: white;">
-                    <ul id="polygons-List"></ul>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
           <div class="row">
             <div class="col">
@@ -66,6 +56,23 @@
               </div>
             </div>
           </div>
+          <div class="row">
+            <div class="col">
+              <div class="card">
+                <div class="card-header" id="polygons-list-heading">
+                  <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#polygons-list-collapse" aria-expanded="true" aria-controls="polygons-list-collapse">
+                    Change visibility of Polygons:
+                  </button>
+                </div>
+                <div id="polygons-list-collapse" class="collapse show" aria-labelledby="polygons-list-heading">
+                  <div class="card-body" style="background-color: white;">
+                    <ul id="polygons-List"></ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
         </form>
       </div>
     
@@ -132,82 +139,120 @@ var drawControl = new L.Control.Draw({
         var data = JSON.parse(dataElement.getAttribute('data-value'));
 
         // Retrieve the filter selects
-        var stateSelect = document.getElementById('state-select');
-        var districtSelect = document.getElementById('district-select');
+var stateSelect = document.getElementById('state-select');
+var districtSelect = document.getElementById('district-select');
+var mdoIdSelect = document.getElementById('mdo-select');
 
-        // Initialize the district options based on the selected state
-        stateSelect.addEventListener('change', function() {
-            var selectedState = stateSelect.value;
-            initializeDistrictOptions(selectedState);
-        });
+// Initialize the district and MDO_ID options based on the selected state
+stateSelect.addEventListener('change', function() {
+    var selectedState = stateSelect.value;
+    initializeDistrictOptions(selectedState);
+});
 
-        // Initialize the district options on page load
-        initializeDistrictOptions(stateSelect.value);
+// Initialize the district and MDO_ID options on page load
+initializeDistrictOptions(stateSelect.value);
 
-        // Function to initialize the district options based on the selected state
-        function initializeDistrictOptions(selectedState) {
+// Function to initialize the district and MDO_ID options based on the selected state
+function initializeDistrictOptions(selectedState) {
     // Retrieve the unique districts based on the selected state
-            var districts = getUniqueDistricts(selectedState);
+    var districts = getUniqueDistricts(selectedState);
 
-            // Clear the existing district options
-            while (districtSelect.options.length > 0) {
-                districtSelect.options.remove(0);
-            }
+    // Clear the existing district options
+    while (districtSelect.options.length > 0) {
+        districtSelect.options.remove(0);
+    }
 
-            // Add the "All Districts" option
-            var allOption = document.createElement('option');
-            allOption.value = 'All';
-            allOption.text = 'All Districts';
-            districtSelect.appendChild(allOption);
+    // Add the "All Districts" option
+    var allDistrictOption = document.createElement('option');
+    allDistrictOption.value = 'All';
+    allDistrictOption.text = 'All Districts';
+    districtSelect.appendChild(allDistrictOption);
 
-            // Add the district options
-            districts.forEach(function (district) {
-                var option = document.createElement('option');
-                option.value = district;
-                option.text = district;
-                districtSelect.appendChild(option);
-            });
+    // Add the district options
+    districts.forEach(function (district) {
+        var option = document.createElement('option');
+        option.value = district;
+        option.text = district;
+        districtSelect.appendChild(option);
+    });
+
+    // Retrieve the unique MDO_IDs based on the selected state and district
+    var mdoIds = getUniqueMdoIds(selectedState, districtSelect.value);
+
+    // Clear the existing MDO_ID options
+    while (mdoIdSelect.options.length > 0) {
+        mdoIdSelect.options.remove(0);
+    }
+
+    // Add the "All MDO IDs" option
+    var allMdoIdOption = document.createElement('option');
+    allMdoIdOption.value = 'All';
+    allMdoIdOption.text = 'All MDO IDs';
+    mdoIdSelect.appendChild(allMdoIdOption);
+
+    // Add the MDO_ID options
+    mdoIds.forEach(function (mdoId) {
+        var option = document.createElement('option');
+        option.value = mdoId;
+        option.text = mdoId;
+        mdoIdSelect.appendChild(option);
+    });
 }
-        // Retrieve the unique states from the data
-        var states = getUniqueStates();
 
-        // Add the state options
-        states.forEach(function (state) {
-            var option = document.createElement('option');
-            option.value = state;
-            option.text = state;
-            stateSelect.appendChild(option);
-        });
+// Retrieve the unique states from the data
+var states = getUniqueStates();
 
-        // Function to retrieve the unique states from the data
-        function getUniqueStates() {
-            var states = [];
+// Add the state options
+states.forEach(function (state) {
+    var option = document.createElement('option');
+    option.value = state;
+    option.text = state;
+    stateSelect.appendChild(option);
+});
 
-            data.forEach(function (entry) {
-                if (!states.includes(entry.State)) {
-                    states.push(entry.State);
-                }
-            });
+// Function to retrieve the unique states from the data
+function getUniqueStates() {
+    var states = [];
 
-            return states;
+    data.forEach(function (entry) {
+        if (!states.includes(entry.State)) {
+            states.push(entry.State);
         }
+    });
 
-
-        // Function to retrieve the unique districts based on the selected state
-        function getUniqueDistricts(selectedState) {
-            var districts = [];
-
-            data.forEach(function (entry) {
-                if (selectedState === 'All' || entry.State === selectedState) {
-                    if (!districts.includes(entry.District)) {
-                        districts.push(entry.District);
-                    }
-                }
-            });
-
-            return districts;
+    return states;
 }
-// Create a function to save the polygon validation
+
+// Function to retrieve the unique districts based on the selected state
+function getUniqueDistricts(selectedState) {
+    var districts = [];
+
+    data.forEach(function (entry) {
+        if (selectedState === 'All' || entry.State === selectedState) {
+            if (!districts.includes(entry.District)) {
+                districts.push(entry.District);
+            }
+        }
+    });
+
+    return districts;
+}
+
+// Function to retrieve the unique MDO_IDs based on the selected state and district
+function getUniqueMdoIds(selectedState, selectedDistrict) {
+    var mdoIds = [];
+
+    data.forEach(function (entry) {
+        if ((selectedState === 'All' || entry.State === selectedState) &&
+            (selectedDistrict === 'All' || entry.District === selectedDistrict)) {
+            if (!mdoIds.includes(entry.MDO_ID)) {
+                mdoIds.push(entry.MDO_ID);
+            }
+        }
+    });
+
+    return mdoIds;
+}
 function savePolygonValidation(farmerId, fieldId, mdoId) {
     // Retrieve the selected validation option
     var validationSelect = document.getElementById('validation-select');
@@ -221,7 +266,24 @@ function savePolygonValidation(farmerId, fieldId, mdoId) {
         if (xhr.readyState === 4 && xhr.status === 200) {
             var response = JSON.parse(xhr.responseText);
             if (response.status === 'success') {
-                console.log('Polygon validation saved successfully.');
+                // Create prompt elements
+                var promptDiv = document.createElement('div');
+                var promptMessage = document.createElement('p');
+                promptMessage.innerText = 'Polygon validation saved successfully.';
+
+                // Add Bootstrap classes to the prompt elements
+                promptDiv.classList.add('alert', 'alert-success', 'position-absolute', 'top-50', 'start-50', 'translate-middle');
+                promptDiv.style.zIndex = 1000; // Set a high z-index value to make it appear above all layers
+                promptMessage.classList.add('m-0'); // Add margin class to remove any unnecessary space
+
+                // Append the prompt elements to the document body
+                promptDiv.appendChild(promptMessage);
+                document.body.appendChild(promptDiv);
+
+                // Hide the prompt after 1 second
+                setTimeout(function() {
+                    document.body.removeChild(promptDiv);
+                }, 1000);
             } else {
                 console.error('Failed to save polygon validation.');
             }
@@ -229,6 +291,7 @@ function savePolygonValidation(farmerId, fieldId, mdoId) {
     };
     xhr.send('farmer_id=' + farmerId + '&field_id=' + fieldId + '&mdo_id=' + mdoId + '&validation=' + validation);
 }
+
 
 // Function to send the updated coordinates to the server
 
@@ -249,17 +312,39 @@ function saveCoordinates(updatedCoordinates, entry) {
     xhr.open('POST', '/save_coordinates', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            var response = JSON.parse(xhr.responseText);
-            if (response.status === 'success') {
-                console.log('Coordinates saved successfully.');
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                var response = JSON.parse(xhr.responseText);
+                if (response.status === 'success') {
+                    // Create prompt elements
+                    var promptDiv = document.createElement('div');
+                    var promptMessage = document.createElement('p');
+                    promptMessage.innerText = response.prompt;
+
+                    // Add Bootstrap classes to the prompt elements
+                    promptDiv.classList.add('alert', 'alert-primary', 'position-absolute', 'top-50', 'start-50', 'translate-middle');
+                    promptDiv.style.zIndex = 1000; // Set a high z-index value to make it appear above all layers
+                    promptMessage.classList.add('m-0'); // Add margin class to remove any unnecessary space
+
+                    // Append the prompt elements to the document body
+                    promptDiv.appendChild(promptMessage);
+                    document.body.appendChild(promptDiv);
+
+                    // Hide the prompt after 1 second
+                    setTimeout(function() {
+                        document.body.removeChild(promptDiv);
+                    }, 1000);
+                } else {
+                    console.error('Failed to save coordinates.');
+                }
             } else {
-                console.error('Failed to save coordinates.');
+                console.error('Error occurred while saving coordinates. Status: ' + xhr.status);
             }
         }
     };
     xhr.send(JSON.stringify(payload));
 }
+
 var polygonsList = document.getElementById('polygons-List');
 var invalidPolygonsList = document.getElementById('invalid-polygons-list');
         // Iterate over the data and create polylines on the map
@@ -404,12 +489,7 @@ var invalidPolygonsList = document.getElementById('invalid-polygons-list');
     });
 } else {
     console.error('No data found.');
-}
-
-        
-    </script>
-  
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+}    
+    </script> 
 </body>
 </html>

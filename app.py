@@ -41,22 +41,35 @@ def index():
 def filter_polygons():
     state = request.form.get('state')
     district = request.form.get('district')
-
+    mdo_id = request.form.get('mdo_id')
     data = read_excel_data()
-
+    
     if state and state != 'All':
         data = [entry for entry in data if entry['State'] == state]
 
     if district and district != 'All':
+        new_data = []   # Add this condition to filter based on MDO_ID
+        for entry in data:
+            
+            if entry['District'] == district:
+                
+                new_data.append(entry)
+        data = new_data 
         data = [entry for entry in data if entry['District'] == district]
-
-    center_lat, center_lng ,zoom = calculate_center_coordinates(data, state, district)
-
+    
+    if mdo_id and mdo_id != 'All':
+        new_data = []   # Add this condition to filter based on MDO_ID
+        for entry in data:
+            
+            if str(entry['MDO_ID']) == str(mdo_id):
+                
+                new_data.append(entry)
+        data = new_data        
+    center_lat, center_lng ,zoom = calculate_center_coordinates(data, state, district,mdo_id)
+    
     data_json = json.dumps(data)  # Convert filtered data to JSON string
     
     return render_template('index.html', data=data_json, center_lat=center_lat, center_lng=center_lng, zoom=zoom)
-
-
 @app.route('/save_validation', methods=['POST'])
 def save_polygon_validation():
     farmer_id = request.form.get('farmer_id')
@@ -100,21 +113,35 @@ def save_coordinates():
     data = request.json
     coordinates = data['coordinates']
     farmer_id = data['farmer_id']
-    field_id =  data['field_id']
-    
-    # Process the updated coordinates here
-    # Replace the original coordinates in the Excel file
-    print(coordinates)
-    print(farmer_id)
-    print(field_id)
-    return {'status': 'success'}
+    field_id = data['field_id']
 
-def calculate_center_coordinates(data, state=None, district=None):
+    # Read the Excel file
+    df = pd.read_excel('Kushiluv- Polygon data(internship).xlsx')
+
+    # Update the coordinates for the specified farmer_id and field_id
+    condition = (df['Farmer_ID'] == farmer_id) & (df['Field ID'] == field_id)
+    coordinates_str = ' '.join([f"{point['lng']},{point['lat']},0" for point in coordinates])
+    df.loc[condition, 'Coordinates'] = coordinates_str
+
+    # Save the updated DataFrame back to the Excel file
+    df.to_excel('Kushiluv- Polygon data(internship).xlsx', index=False)
+
+    # Check if the coordinates were successfully saved
+    saved_coordinates = df.loc[condition, 'Coordinates'].values[0]
+    if saved_coordinates == coordinates_str:
+        prompt = 'Coordinates have been successfully saved.'
+    else:
+        prompt = 'Failed to save coordinates.'
+
+    return {'status': 'success', 'prompt': prompt}
+def calculate_center_coordinates(data, state=None, district=None,mdo_id=None):
     
     if district and district != 'All':
         filtered_data = [entry for entry in data if entry['District'] == district]
     elif state and state != 'All':
         filtered_data = [entry for entry in data if entry['State'] == state]
+    elif mdo_id and mdo_id != 'All':
+        filtered_data = [entry for entry in data if entry['MDO_ID'] == mdo_id]    
     else:
         filtered_data = data
     #print(filtered_data)
