@@ -3,13 +3,47 @@ import json
 import pandas as pd
 import math
 import numpy as np
+import pandas as pd
+import geopandas as gpd
+from shapely.geometry.polygon import orient
+from shapely.geometry import Polygon
 app = Flask(__name__)
 
+def gpd_geographic_area(geodf):
+    if not geodf.crs or not geodf.crs.is_geographic:
+        raise TypeError('geodataframe should have a geographic coordinate system')
+
+    geod = geodf.crs.get_geod()
+    
+    def area_calc(geom):
+        if geom.geom_type not in ['MultiPolygon', 'Polygon']:
+            return np.nan
+        
+        # For MultiPolygon, calculate area for each polygon separately
+        if geom.geom_type == 'MultiPolygon':
+            return np.sum([area_calc(p) for p in geom.geoms])
+
+        # Orient to ensure a counter-clockwise traversal. 
+        # See https://pyproj4.github.io/pyproj/stable/api/geod.html
+        # geometry_area_perimeter returns (area, perimeter)
+        return geod.geometry_area_perimeter(orient(geom, 1))[0]
+    
+    return geodf.geometry.apply(area_calc)
+
+def calculate_area(points):
+ 
+    geodf = gpd.GeoDataFrame(geometry=[Polygon([(point['Longitude'], point['Latitude']) for point in points])])
+
+    geodf.crs = "EPSG:4326"
+    area = gpd_geographic_area(geodf).values[0]
+
+    return area
+
 def read_excel_data():
-    # Replace this with your own logic to read the data from Excel
     # Read the Excel sheet into a DataFrame
     df = pd.read_excel('Kushiluv- Polygon data(internship).xlsx')
     df = df.where(pd.notnull(df), None)
+    
     # Convert the DataFrame to a list of dictionaries
     df = df.fillna('')
     data = df.to_dict(orient='records')
@@ -25,10 +59,29 @@ def read_excel_data():
                 point = {"Latitude": float(lat), "Longitude": float(lon)}
                 points.append(point)
         row['Points'] = points
+        
         del row['Coordinates']
 
         # Remove leading and trailing non-breaking space (\xa0) from District
         row['District'] = row['District'].strip('\xa0')
+        coordinates = row['Points']
+        
+        # Compute the area using the coordinates
+        if coordinates:
+            try:
+                area = calculate_area(coordinates)
+                area = area/4046.856
+                row['Area'] = area
+                
+                print(row['Farmer_ID'], "Area:", area)
+            except ValueError:
+                print("Invalid coordinates for row:", row)
+    
+    df['Area'] = [row['Area'] for row in data]
+    
+    with pd.ExcelWriter('Kushiluv- Polygon data(internship).xlsx') as writer:
+        df.to_excel(writer, index=False)
+    
     return data
 
 @app.route('/')
@@ -42,41 +95,44 @@ def filter_polygons():
     state = request.form.get('state')
     district = request.form.get('district')
     mdo_id = request.form.get('mdo_id')
+    search_query = request.form.get('search_query')
     data = read_excel_data()
     
     if state and state != 'All':
         data = [entry for entry in data if entry['State'] == state]
 
     if district and district != 'All':
-        new_data = []   # Add this condition to filter based on MDO_ID
-        for entry in data:
-            
-            if entry['District'] == district:
-                
-                new_data.append(entry)
-        data = new_data 
         data = [entry for entry in data if entry['District'] == district]
     
     if mdo_id and mdo_id != 'All':
-        new_data = []   # Add this condition to filter based on MDO_ID
+        data = [entry for entry in data if str(entry['MDO_ID']) == str(mdo_id)]
+    
+    if search_query:
+        search_results = []
         for entry in data:
-            
-            if str(entry['MDO_ID']) == str(mdo_id):
-                
-                new_data.append(entry)
-        data = new_data        
-    center_lat, center_lng ,zoom = calculate_center_coordinates(data, state, district,mdo_id)
+            # Iterate through each column in the entry
+            for column in entry.values():
+                # Check if the search query matches the start of any column value
+                if str(column).lower().startswith(search_query.lower()):
+                    search_results.append(entry)
+                    break  # Break the inner loop if a match is found in any column
+    
+        data = search_results
+    
+    center_lat, center_lng ,zoom = calculate_center_coordinates(data, state, district, mdo_id)
     
     data_json = json.dumps(data)  # Convert filtered data to JSON string
     
     return render_template('index.html', data=data_json, center_lat=center_lat, center_lng=center_lng, zoom=zoom)
+
 @app.route('/save_validation', methods=['POST'])
 def save_polygon_validation():
     farmer_id = request.form.get('farmer_id')
     field_id = request.form.get('field_id')
     mdo_id = request.form.get('mdo_id')
     validation = request.form.get('validation')
-    
+    remark = request.form.get('remark')
+
     # Load the Excel file into a DataFrame
     df = pd.read_excel('Kushiluv- Polygon data(internship).xlsx')
 
@@ -84,6 +140,11 @@ def save_polygon_validation():
     if 'polygon_validation' not in df.columns:
         # If it doesn't exist, create the column and initialize it with empty values
         df['polygon_validation'] = ''
+
+    # Check if the "validation_remark" column already exists in the DataFrame
+    if 'validation_remark' not in df.columns:
+        # If it doesn't exist, create the column and initialize it with empty values
+        df['validation_remark'] = ''
 
     # Convert the values in the "Farmer_ID" and "Field ID" columns to strings
     df['Farmer_ID'] = df['Farmer_ID'].astype(str)
@@ -95,9 +156,10 @@ def save_polygon_validation():
     # Replace NaN values with empty strings in the DataFrame
     df = df.replace(np.nan, '', regex=True)
 
-    # Update the corresponding row with the new validation value
+    # Update the corresponding row with the new validation value and remark
     mask = (df['Farmer_ID'] == farmer_id) & (df['Field ID'] == field_id)
     df.loc[mask, 'polygon_validation'] = validation
+    df.loc[mask, 'validation_remark'] = remark
 
     # Save the updated DataFrame back to the Excel file using ExcelWriter
     with pd.ExcelWriter('Kushiluv- Polygon data(internship).xlsx') as writer:
@@ -115,23 +177,37 @@ def save_coordinates():
     farmer_id = data['farmer_id']
     field_id = data['field_id']
 
+    # Create points from the coordinates
+    points = []
+    for coordinate in coordinates:
+        print(coordinate)
+        lat = coordinate['lat']
+        lng = coordinate['lng']
+        point = {"Longitude": float(lng), "Latitude": float(lat)}
+        points.append(point)
+
+    # Calculate the area using the points
+    area = calculate_area(points)
+    area = area/4046.856
     # Read the Excel file
     df = pd.read_excel('Kushiluv- Polygon data(internship).xlsx')
 
-    # Update the coordinates for the specified farmer_id and field_id
+    # Update the coordinates and area for the specified farmer_id and field_id
     condition = (df['Farmer_ID'] == farmer_id) & (df['Field ID'] == field_id)
-    coordinates_str = ' '.join([f"{point['lng']},{point['lat']},0" for point in coordinates])
+    coordinates_str = ' '.join([f"{point['Longitude']},{point['Latitude']},0" for point in points])
     df.loc[condition, 'Coordinates'] = coordinates_str
+    df.loc[condition, 'Area'] = area
 
     # Save the updated DataFrame back to the Excel file
     df.to_excel('Kushiluv- Polygon data(internship).xlsx', index=False)
 
-    # Check if the coordinates were successfully saved
+    # Check if the coordinates and area were successfully saved
     saved_coordinates = df.loc[condition, 'Coordinates'].values[0]
-    if saved_coordinates == coordinates_str:
-        prompt = 'Coordinates have been successfully saved.'
+    saved_area = df.loc[condition, 'Area'].values[0]
+    if saved_coordinates == coordinates_str and saved_area == area:
+        prompt = 'Coordinates and area have been successfully saved.'
     else:
-        prompt = 'Failed to save coordinates.'
+        prompt = 'Failed to save coordinates and area.'
 
     return {'status': 'success', 'prompt': prompt}
 def calculate_center_coordinates(data, state=None, district=None,mdo_id=None):

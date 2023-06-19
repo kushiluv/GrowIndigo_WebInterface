@@ -3,3 +3,6 @@
 ->add the feature to move the vertices
 ->mdo based filter
 ->list of fields which arent labelled yet
+->polygon overlap filter
+->unvali and vali filter
+->remarks
