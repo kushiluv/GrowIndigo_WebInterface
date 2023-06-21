@@ -181,6 +181,10 @@ def read_excel_data():
 
 @app.route('/index1')
 def index1():
+    if not session.get("user"):
+        return redirect(url_for("login"))
+    
+    user = session["user"]  # Get the authenticated user from the session
     data = read_excel_data()
     data_json = json.dumps(data)  # Convert data to JSON string
     return render_template('index1.html', data=data_json)
@@ -271,6 +275,7 @@ def save_polygon_validation():
 
     # Return the JSON response
     return jsonify({'data': json_data, 'status': 'success'})
+
 @app.route('/save_coordinates', methods=['POST'])
 def save_coordinates():
     data = request.json
