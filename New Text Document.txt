@@ -1,0 +1,4 @@
+@echo off
+set FLASK_APP=your_app_name.py
+set FLASK_ENV=development
+flask run

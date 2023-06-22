@@ -2,8 +2,8 @@ import uuid
 import requests
 from flask import Flask, render_template, session, request, redirect, url_for
 from flask_session import Session 
-import msal
 from flask import jsonify
+import msal
 import app_config
 import json
 import time
@@ -159,7 +159,8 @@ def read_excel_data():
         # Remove leading and trailing non-breaking space (\xa0) from District
         row['District'] = row['District'].strip('\xa0')
         coordinates = row['Points']
-        
+        print(type(coordinates))
+        print(coordinates)
         # Compute the area using the coordinates
         if coordinates:
             try:
@@ -179,7 +180,6 @@ def read_excel_data():
     return data
 
 
-
 @app.route('/index1')
 def index1():
     if not session.get("user"):
@@ -196,23 +196,29 @@ def redirect_index1():
     time.sleep(1)  # Delay the redirect for 1 second
     return redirect(url_for('index1'))
 
+from datetime import datetime
+
+
 @app.route('/filter', methods=['POST'])
 def filter_polygons():
     state = request.form.get('state')
     district = request.form.get('district')
     mdo_id = request.form.get('mdo_id')
     search_query = request.form.get('search_query')
+    start_date_str = request.form.get('start_date')
+    end_date_str = request.form.get('end_date')
+
     data = read_excel_data()
-    
+
     if state and state != 'All':
         data = [entry for entry in data if entry['State'] == state]
 
     if district and district != 'All':
         data = [entry for entry in data if entry['District'] == district]
-    
+
     if mdo_id and mdo_id != 'All':
         data = [entry for entry in data if str(entry['MDO_ID']) == str(mdo_id)]
-    
+
     if search_query:
         search_results = []
         for entry in data:
@@ -222,14 +228,20 @@ def filter_polygons():
                 if str(column).lower().startswith(search_query.lower()):
                     search_results.append(entry)
                     break  # Break the inner loop if a match is found in any column
-    
+
         data = search_results
-    
-    center_lat, center_lng ,zoom = calculate_center_coordinates(data, state, district, mdo_id)
-    
+
+    if start_date_str and end_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+        data = [entry for entry in data if start_date <= datetime.strptime(entry['Date'], '%d-%m-%Y') <= end_date]
+
+    center_lat, center_lng, zoom = calculate_center_coordinates(data, state, district, mdo_id)
+
     data_json = json.dumps(data)  # Convert filtered data to JSON string
-    
+
     return render_template('index1.html', data=data_json, center_lat=center_lat, center_lng=center_lng, zoom=zoom)
+
 
 @app.route('/save_validation', methods=['POST'])
 def save_polygon_validation():
@@ -283,25 +295,26 @@ def save_coordinates():
     coordinates = data['coordinates']
     farmer_id = data['farmer_id']
     field_id = data['field_id']
-
-    # Create points from the coordinates
+    print("Save -")
+    
+    # Create coordinates string in the desired format
+    coordinates_str = ','.join([f"{coordinate['lat']}-{coordinate['lng']}" for coordinate in coordinates])
+    print(coordinates_str)
+    # Calculate the area using the coordinates
     points = []
     for coordinate in coordinates:
-        print(coordinate)
         lat = coordinate['lat']
         lng = coordinate['lng']
         point = {"Longitude": float(lng), "Latitude": float(lat)}
         points.append(point)
-
-    # Calculate the area using the points
     area = calculate_area(points)
-    area = area/4046.856
+    area = area / 4046.856
+
     # Read the Excel file
     df = pd.read_excel('Kushiluv- Polygon data(internship).xlsx')
 
     # Update the coordinates and area for the specified farmer_id and field_id
     condition = (df['Farmer_ID'] == farmer_id) & (df['Field ID'] == field_id)
-    coordinates_str = ' '.join([f"{point['Longitude']},{point['Latitude']},0" for point in points])
     df.loc[condition, 'Coordinates'] = coordinates_str
     df.loc[condition, 'Area'] = area
 
