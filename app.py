@@ -32,12 +32,11 @@ def index():
 
 @app.route("/login")
 def login():
-    # Technically we could use empty list [] as scopes to do just sign in,
-    # here we choose to also collect end user consent upfront
+    
     session["flow"] = _build_auth_code_flow(scopes=app_config.SCOPE)
     return render_template("login.html", auth_url=session["flow"]["auth_uri"], version=msal.__version__)
 
-@app.route(app_config.REDIRECT_PATH)  # Its absolute URL must match your app's redirect_uri set in AAD
+@app.route("/getAToken")  # Its absolute URL must match your app's redirect_uri set in AAD
 def authorized():
     try:
         cache = _load_cache()
@@ -144,17 +143,17 @@ def read_excel_data():
 
     # Update the coordinates column
     for row in data:
-        coordinates = row['Coordinates'].split(' ')
+        coordinates = row['Coordinates'].split(',')
         points = []
         for coordinate in coordinates:
-            values = coordinate.split(',')
-            if len(values) >= 2:
-                lon, lat = values[:2]  # Extract first two values
+            lat_lon_pair = coordinate.split('-')
+            if len(lat_lon_pair) == 2:
+                lat, lon = lat_lon_pair
                 point = {"Latitude": float(lat), "Longitude": float(lon)}
                 points.append(point)
         row['Points'] = points
         
-        del row['Coordinates']
+        
 
         # Remove leading and trailing non-breaking space (\xa0) from District
         row['District'] = row['District'].strip('\xa0')
@@ -177,6 +176,7 @@ def read_excel_data():
         df.to_excel(writer, index=False)
     
     return data
+
 
 
 @app.route('/index1')
