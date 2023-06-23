@@ -133,11 +133,13 @@ def calculate_area(points):
 
     return area
 
+from datetime import datetime
+
 def read_excel_data():
     # Read the Excel sheet into a DataFrame
     df = pd.read_excel('Kushiluv- Polygon data(internship).xlsx')
     df = df.where(pd.notnull(df), None)
-    
+
     # Convert the DataFrame to a list of dictionaries
     df = df.fillna('')
     data = df.to_dict(orient='records')
@@ -153,30 +155,30 @@ def read_excel_data():
                 point = {"Latitude": float(lat), "Longitude": float(lon)}
                 points.append(point)
         row['Points'] = points
-        
-        
 
         # Remove leading and trailing non-breaking space (\xa0) from District
         row['District'] = row['District'].strip('\xa0')
+
+        # Convert Timestamp to string
+        if isinstance(row['Date'], pd.Timestamp):
+            row['Date'] = row['Date'].strftime('%Y-%m-%d %H:%M:%S')
+
         coordinates = row['Points']
-        print(type(coordinates))
-        print(coordinates)
+
         # Compute the area using the coordinates
         if coordinates:
             try:
                 area = calculate_area(coordinates)
-                area = area/4046.856
+                area = area / 4046.856
                 row['Area'] = area
-                
-                print(row['Farmer_ID'], "Area:", area)
             except ValueError:
                 print("Invalid coordinates for row:", row)
-    
+
     df['Area'] = [row['Area'] for row in data]
-    
+    print(type(df['Date'][0]))
     with pd.ExcelWriter('Kushiluv- Polygon data(internship).xlsx') as writer:
         df.to_excel(writer, index=False)
-    
+
     return data
 
 
@@ -234,7 +236,8 @@ def filter_polygons():
     if start_date_str and end_date_str:
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
-        data = [entry for entry in data if start_date <= datetime.strptime(entry['Date'], '%d-%m-%Y') <= end_date]
+        data = [entry for entry in data if start_date <= datetime.strptime(entry['Date'], '%Y-%m-%d %H:%M:%S') <= end_date]
+
 
     center_lat, center_lng, zoom = calculate_center_coordinates(data, state, district, mdo_id)
 
