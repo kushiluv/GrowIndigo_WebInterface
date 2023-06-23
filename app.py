@@ -150,37 +150,40 @@ def filter_polygons():
     return render_template('index1.html', data=filtered_data_json, center_lat=center_lat, center_lng=center_lng, zoom=zoom,items_per_page=items_per_page, page=page)
 
 
-
+import csv
 @app.route('/save_validation', methods=['POST'])
 def save_polygon_validation():
     global data
-    print(data[0]['polygon_validation'] , data[0]['Farmer_ID'])
+    print(data[0]['polygon_validation'], data[0]['Farmer_ID'])
     farmer_id = request.form.get('farmer_id')
     field_id = request.form.get('field_id')
     mdo_id = request.form.get('mdo_id')
     validation = request.form.get('validation')
     remark = request.form.get('remark')
-    
-    print()
-    print()
-    print()
-    print()
+
     # Update the corresponding row in the data dictionary with the new validation value and remark
     for entry in data:
         if str(entry['Farmer_ID']) == str(farmer_id) and str(entry['Field ID']) == str(field_id):
             entry['polygon_validation'] = validation
             entry['validation_remark'] = remark
 
-    # Save the updated data dictionary back to the Excel file using DataFrame
-    df = pd.DataFrame(data)
-    with pd.ExcelWriter('Kushiluv- Polygon data(internship).xlsx') as writer:
-        df.to_excel(writer, index=False)
+    # Save the updated data dictionary as a CSV file
+    print("here")
+    filename = 'Kushiluv- Polygon data(internship).csv'
+    save_data_as_csv(filename, data)
+    print("dhere")
     print(data[0]['polygon_validation'])
-    # Convert the DataFrame to JSON, replacing NaN values with empty strings
-    json_data = df.fillna('').to_json(orient='records')
+    # Convert the data dictionary to JSON, replacing NaN values with empty strings
+    json_data = pd.DataFrame(data).fillna('').to_json(orient='records')
 
     # Return the JSON response
     return jsonify({'data': json_data, 'status': 'success'})
+
+def save_data_as_csv(filename, data):
+    with open(filename, 'w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=data[0].keys())
+        writer.writeheader()
+        writer.writerows(data)
 
 @app.route('/save_coordinates', methods=['POST'])
 def save_coordinates():
@@ -271,4 +274,3 @@ def calculate_center_coordinates(data, state=None, district=None,mdo_id=None):
 
 if __name__ == "__main__":
     app.run()
-
