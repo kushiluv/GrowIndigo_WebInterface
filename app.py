@@ -159,9 +159,9 @@ def read_excel_data():
         # Remove leading and trailing non-breaking space (\xa0) from District
         row['District'] = row['District'].strip('\xa0')
 
-        # Convert Timestamp to string
+        # Convert date to string with the desired format
         if isinstance(row['Date'], pd.Timestamp):
-            row['Date'] = row['Date'].strftime('%Y-%m-%d %H:%M:%S')
+            row['Date'] = row['Date'].strftime('%m-%d-%Y')
 
         coordinates = row['Points']
 
@@ -180,6 +180,7 @@ def read_excel_data():
         df.to_excel(writer, index=False)
 
     return data
+
 
 
 @app.route('/index1')
@@ -234,9 +235,9 @@ def filter_polygons():
         data = search_results
 
     if start_date_str and end_date_str:
-        start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
-        data = [entry for entry in data if start_date <= datetime.strptime(entry['Date'], '%Y-%m-%d %H:%M:%S') <= end_date]
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        data = [entry for entry in data if start_date <= datetime.strptime(entry['Date'], '%m-%d-%Y').date() <= end_date]
 
 
     center_lat, center_lng, zoom = calculate_center_coordinates(data, state, district, mdo_id)
@@ -244,6 +245,7 @@ def filter_polygons():
     data_json = json.dumps(data)  # Convert filtered data to JSON string
 
     return render_template('index1.html', data=data_json, center_lat=center_lat, center_lng=center_lng, zoom=zoom)
+
 
 
 @app.route('/save_validation', methods=['POST'])
