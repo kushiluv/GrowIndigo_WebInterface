@@ -59,7 +59,19 @@
               <button type="submit" class="btn btn-primary">Filter</button>
               <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>
           </div>
-  
+          <div class="pagination">
+            {% if data and data|length > items_per_page %}
+                {% if page > 1 %}
+                    <a href="{{ url_for('filter_polygons', page=page-1) }}" class="pagination-link">Previous</a>
+                {% endif %}
+                
+                <span class="pagination-page">Page {{ page }}</span>
+                
+                {% if (page-1) * items_per_page + items_per_page < data|length %}
+                    <a href="{{ url_for('filter_polygons', page=page+1) }}" class="pagination-link">Next</a>
+                {% endif %}
+            {% endif %}
+        </div>
           <div class="row">
               <div class="col">
                   <div class="card">
@@ -445,6 +457,7 @@ var validatedPolygonsList = document.getElementById('validated-polygons-list');
         // Customize the editing icon
 
         // Add any other necessary properties to the polygon
+
         polygon.properties = {
             state: entry.State,
             district: entry.District,
@@ -452,7 +465,7 @@ var validatedPolygonsList = document.getElementById('validated-polygons-list');
             fieldId: entry['Field ID'],
             mdoId: entry.MDO_ID,
         };
-        
+       
         // Append the buttons to the popup content
         var popupContentElement = document.createElement('div');
 popupContentElement.innerHTML = `
