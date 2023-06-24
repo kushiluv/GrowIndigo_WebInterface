@@ -15,8 +15,24 @@ import geopandas as gpd
 from datetime import datetime
 from shapely.geometry.polygon import orient
 from shapely.geometry import Polygon
+import os
 app = Flask(__name__)
-df = pd.read_excel('Kushiluv- Polygon data(internship).xlsx')
+
+
+filename_csv = 'Kushiluv- Polygon data(internship)1.csv'
+filename_xlsx = 'Kushiluv- Polygon data(internship).xlsx'
+
+if os.path.isfile(filename_csv):
+    try:
+        df = pd.read_csv(filename_csv)
+    except pd.errors.EmptyDataError:
+        df = pd.DataFrame()
+else:
+    try:
+        df = pd.read_excel(filename_xlsx)
+    except FileNotFoundError:
+        df = pd.DataFrame()
+
 df = df.where(pd.notnull(df), None)
 
             # Convert the DataFrame to a list of dictionaries
@@ -167,17 +183,19 @@ def save_polygon_validation():
             entry['polygon_validation'] = validation
             entry['validation_remark'] = remark
 
-    # Save the updated data dictionary as a CSV file
-    print("here")
-    filename = 'Kushiluv- Polygon data(internship).csv'
-    save_data_as_csv(filename, data)
-    print("dhere")
-    print(data[0]['polygon_validation'])
+  
     # Convert the data dictionary to JSON, replacing NaN values with empty strings
     json_data = pd.DataFrame(data).fillna('').to_json(orient='records')
 
     # Return the JSON response
     return jsonify({'data': json_data, 'status': 'success'})
+
+@app.route('/save_to_file', methods=['POST'])
+def save_to_file():
+    global data
+    filename = 'Kushiluv- Polygon data(internship).csv'
+    save_data_as_csv(filename, data)
+    return jsonify({'status': 'success'})
 
 def save_data_as_csv(filename, data):
     with open(filename, 'w', newline='') as file:
@@ -214,13 +232,8 @@ def save_coordinates():
             entry['Coordinates'] = coordinates_str
             entry['Area'] = area
 
-    
 
-    # Save the updated data dictionary back to the Excel file using DataFrame
-    df = pd.DataFrame(data.copy())
-    with pd.ExcelWriter('Kushiluv- Polygon data(internship).xlsx') as writer:
-        df.to_excel(writer, index=False)
-    print(data[3]['Coordinates'] , data[0]['Farmer_ID'])
+    
     # Check if the coordinates and area were successfully saved
     saved_coordinates = df.loc[(df['Farmer_ID'] == farmer_id) & (df['Field ID'] == field_id), 'Coordinates'].values[0]
     saved_area = df.loc[(df['Farmer_ID'] == farmer_id) & (df['Field ID'] == field_id), 'Area'].values[0]

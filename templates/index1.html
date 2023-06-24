@@ -58,6 +58,7 @@
           <div class="mb-3">
               <button type="submit" class="btn btn-primary">Filter</button>
               <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>
+              <button type="button" class="btn btn-success" onclick="saveToFile()">Save to File</button>
           </div>
           <div class="pagination">
             {% if data and data|length > items_per_page %}
@@ -393,6 +394,44 @@ function saveCoordinates(updatedCoordinates, entry) {
         }
     };
     xhr.send(JSON.stringify(payload));
+}
+function saveToFile() {
+    // Send an AJAX request to the server to trigger the save to file functionality
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/save_to_file', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                var response = JSON.parse(xhr.responseText);
+                if (response.status === 'success') {
+                    // Create prompt elements
+                    var promptDiv = document.createElement('div');
+                    var promptMessage = document.createElement('p');
+                    promptMessage.innerText = 'Data saved to file successfully.';
+
+                    // Add Bootstrap classes to the prompt elements
+                    promptDiv.classList.add('alert', 'alert-success', 'position-absolute', 'top-50', 'start-50', 'translate-middle');
+                    promptDiv.style.zIndex = 1000; // Set a high z-index value to make it appear above all layers
+                    promptMessage.classList.add('m-0'); // Add margin class to remove any unnecessary space
+
+                    // Append the prompt elements to the document body
+                    promptDiv.appendChild(promptMessage);
+                    document.body.appendChild(promptDiv);
+
+                    // Hide the prompt after 1 second
+                    setTimeout(function() {
+                        document.body.removeChild(promptDiv);
+                    }, 1000);
+                } else {
+                    console.error('Failed to save data to file.');
+                }
+            } else {
+                console.error('Failed to send request to the server.');
+            }
+        }
+    };
+    xhr.send(JSON.stringify({})); // Send an empty JSON payload
 }
 
 
