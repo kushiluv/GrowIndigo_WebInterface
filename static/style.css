@@ -12,6 +12,10 @@
     background-color: white;
     padding: 10px;
     z-index: 999;
+    
+    /* Adjust the value to leave space for other elements on the page */
+    overflow-y: auto;
+    
 }
 .leaflet-marker-icon.leaflet-editing-icon {
     width: 12px;

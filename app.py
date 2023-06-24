@@ -19,7 +19,7 @@ import os
 app = Flask(__name__)
 
 
-filename_csv = 'Kushiluv- Polygon data(internship)1.csv'
+filename_csv = 'Kushiluv- Polygon data(internship).csv'
 filename_xlsx = 'Kushiluv- Polygon data(internship).xlsx'
 
 if os.path.isfile(filename_csv):
@@ -193,9 +193,21 @@ def save_polygon_validation():
 @app.route('/save_to_file', methods=['POST'])
 def save_to_file():
     global data
-    filename = 'Kushiluv- Polygon data(internship).csv'
-    save_data_as_csv(filename, data)
+    
+    # Check if the request specifies the file format
+    file_format = request.json.get('format')
+    if file_format == 'excel':
+        filename = 'Kushiluv- Polygon data(internship).xlsx'
+        save_data_as_excel(filename, data)
+    else:
+        filename = 'Kushiluv- Polygon data(internship).csv'
+        save_data_as_csv(filename, data)
+    
     return jsonify({'status': 'success'})
+
+def save_data_as_excel(filename, data):
+    df = pd.DataFrame(data)
+    df.to_excel(filename, index=False)
 
 def save_data_as_csv(filename, data):
     with open(filename, 'w', newline='') as file:

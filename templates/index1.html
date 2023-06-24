@@ -57,8 +57,13 @@
   
           <div class="mb-3">
               <button type="submit" class="btn btn-primary">Filter</button>
-              <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>
+              
+              
               <button type="button" class="btn btn-success" onclick="saveToFile()">Save to File</button>
+              <select id="file-format" class="btn btn-secondary">
+                <option value="csv">CSV</option>
+                <option value="excel">Excel</option>
+              </select>
           </div>
           <div class="pagination">
             {% if data and data|length > items_per_page %}
@@ -289,12 +294,7 @@ function getUniqueMdoIds(selectedState, selectedDistrict) {
 
     return mdoIds;
 }
-function clearFilters() {
-  
-        document.getElementById('filter-form').reset();
-      
-        
-    }
+
 function toggleCollapse(elementId) {
           const element = document.getElementById(elementId);
           element.classList.toggle('show');
@@ -396,6 +396,8 @@ function saveCoordinates(updatedCoordinates, entry) {
     xhr.send(JSON.stringify(payload));
 }
 function saveToFile() {
+    var format = document.getElementById('file-format').value;
+
     // Send an AJAX request to the server to trigger the save to file functionality
     var xhr = new XMLHttpRequest();
     xhr.open('POST', '/save_to_file', true);
@@ -431,8 +433,9 @@ function saveToFile() {
             }
         }
     };
-    xhr.send(JSON.stringify({})); // Send an empty JSON payload
+    xhr.send(JSON.stringify({ format: format }));
 }
+
 
 
 var invalidPolygonsList = document.getElementById('invalid-polygons-list');
