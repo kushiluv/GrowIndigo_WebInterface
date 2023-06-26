@@ -56,7 +56,7 @@ for row in data:
 
                 # Convert date to string with the desired format
                 if isinstance(row['Date'], pd.Timestamp):
-                    row['Date'] = row['Date'].strftime('%m-%d-%Y')
+                    row['Date'] = row['Date'].strftime('%d-%m-%Y')
 
                 coordinates = row['Points']
 
@@ -154,7 +154,8 @@ def filter_polygons():
     if start_date_str and end_date_str:
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-        filtered_data = [entry for entry in filtered_data if start_date <= datetime.strptime(entry['Date'], '%m-%d-%Y').date() <= end_date]
+        
+        filtered_data = [entry for entry in filtered_data if start_date <= datetime.strptime(entry['Date'], '%d-%m-%Y').date() <= end_date]
 
 
     center_lat, center_lng, zoom = calculate_center_coordinates(filtered_data, state, district, mdo_id)
