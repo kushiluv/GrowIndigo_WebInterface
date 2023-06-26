@@ -116,7 +116,7 @@ def filter_polygons():
     global data
     filtered_data =data.copy() 
     page = int(request.args.get('page', 1))
-    print("page : ",page)
+    
     items_per_page = 50
 
     start_index = (page - 1) * items_per_page
@@ -170,7 +170,7 @@ import csv
 @app.route('/save_validation', methods=['POST'])
 def save_polygon_validation():
     global data
-    print(data[0]['polygon_validation'], data[0]['Farmer_ID'])
+
     farmer_id = request.form.get('farmer_id')
     field_id = request.form.get('field_id')
     mdo_id = request.form.get('mdo_id')
@@ -198,32 +198,41 @@ def save_to_file():
     file_format = request.json.get('format')
     if file_format == 'excel':
         filename = 'Kushiluv- Polygon data(internship).xlsx'
-        save_data_as_excel(filename, data)
+        save_data_as_excel(filename, remove_points_column(data))
     else:
         filename = 'Kushiluv- Polygon data(internship).csv'
-        save_data_as_csv(filename, data)
+        save_data_as_csv(filename, remove_points_column(data))
     
     return jsonify({'status': 'success'})
+
+def remove_points_column(data):
+    new_data = []
+    for item in data:
+        new_item = item.copy()
+        del new_item['Points']
+        new_data.append(new_item)
+    return new_data
 
 def save_data_as_excel(filename, data):
     df = pd.DataFrame(data)
     df.to_excel(filename, index=False)
 
 def save_data_as_csv(filename, data):
+    fieldnames = data[0].keys()
     with open(filename, 'w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=data[0].keys())
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(data)
 
 @app.route('/save_coordinates', methods=['POST'])
 def save_coordinates():
     global data
-    print(data[3]['Coordinates'] , data[0]['Farmer_ID'])
+   
     request_data = request.json
     coordinates = request_data['coordinates']
     farmer_id = request_data['farmer_id']
     field_id = request_data['field_id']
-    print("Save -")
+   
     
     # Create coordinates string in the desired format
     coordinates_str = ','.join([f"{coordinate['lat']}-{coordinate['lng']}" for coordinate in coordinates])
@@ -238,7 +247,6 @@ def save_coordinates():
     area = calculate_area(points)
     area = area / 4046.856
 
-    # Update the coordinates and area for the specified farmer_id and field_id in the data dictionary
     for entry in data:
         if str(entry['Farmer_ID']) == str(farmer_id) and str(entry['Field ID']) == str(field_id):
             entry['Coordinates'] = coordinates_str
