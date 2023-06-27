@@ -52,7 +52,8 @@ for row in data:
                 row['Points'] = points
 
                 # Remove leading and trailing non-breaking space (\xa0) from District
-                row['District'] = row['District'].strip('\xa0')
+                if isinstance(row['District'], str):
+                    row['District'] = row['District'].strip('\xa0')
 
                 # Convert date to string with the desired format
                 if isinstance(row['Date'], pd.Timestamp):
