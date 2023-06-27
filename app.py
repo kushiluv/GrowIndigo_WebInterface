@@ -217,14 +217,18 @@ def remove_points_column(data):
 
 def save_data_as_excel(filename, data):
     df = pd.DataFrame(data)
+
     df.to_excel(filename, index=False)
 
-def save_data_as_csv(filename, data):
-    fieldnames = data[0].keys()
+def save_data_as_csv(filename, dataa):
+
+    df = pd.DataFrame(dataa)
+  
+    fieldnames = df.columns
     with open(filename, 'w', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(data)
+        writer.writerows(dataa)
 
 @app.route('/save_coordinates', methods=['POST'])
 def save_coordinates():
