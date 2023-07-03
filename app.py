@@ -109,27 +109,38 @@ def index1():
     data_json = json.dumps(data)  # Convert data to JSON string
     items_per_page = 50  # Define the default value of items_per_page
 
-    return render_template('index1.html', data=data_json, items_per_page=items_per_page,page = 1)
+    # Get unique states, districts, and mdo_ids from the entire dataset
+    unique_states = getUniqueStates(data)
+    unique_districts = getUniqueDistricts(data)
+    unique_mdo_names = getUniqueMdoNames(data)
+
+    return render_template(
+        'index1.html',
+        data=data_json,
+        items_per_page=items_per_page,
+        unique_states=(unique_states),
+        unique_districts=(unique_districts),
+        unique_mdo_names=(unique_mdo_names),
+        page=1
+    )
 
 
-@app.route('/filter',methods=['GET', 'POST'])
+@app.route('/filter', methods=['GET', 'POST'])
 def filter_polygons():
     global data
-    filtered_data =data.copy() 
+    filtered_data = data.copy()
     page = int(request.args.get('page', 1))
-    
+
     items_per_page = 50
 
     start_index = (page - 1) * items_per_page
     end_index = start_index + items_per_page
     state = request.form.get('state')
     district = request.form.get('district')
-    mdo_id = request.form.get('mdo_id')
+    mdo_name = request.form.get('mdo_name')
     search_query = request.form.get('search_query')
     start_date_str = request.form.get('start_date')
     end_date_str = request.form.get('end_date')
-
-    
 
     if state and state != 'All':
         filtered_data = [entry for entry in filtered_data if entry['State'] == state]
@@ -137,8 +148,8 @@ def filter_polygons():
     if district and district != 'All':
         filtered_data = [entry for entry in filtered_data if entry['District'] == district]
 
-    if mdo_id and mdo_id != 'All':
-        filtered_data = [entry for entry in filtered_data if str(entry['MDO_ID']) == str(mdo_id)]
+    if mdo_name and mdo_name != 'All':
+        filtered_data = [entry for entry in filtered_data if str(entry['MDO_Name']) == str(mdo_name)]
 
     if search_query:
         search_results = []
@@ -155,18 +166,47 @@ def filter_polygons():
     if start_date_str and end_date_str:
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-        
-        filtered_data = [entry for entry in filtered_data if start_date <= datetime.strptime(entry['Date'], '%d-%m-%Y').date() <= end_date]
 
+        filtered_data = [
+            entry for entry in filtered_data if start_date <= datetime.strptime(entry['Date'], '%d-%m-%Y').date() <= end_date
+        ]
 
-    center_lat, center_lng, zoom = calculate_center_coordinates(filtered_data, state, district, mdo_id)
-    
+    center_lat, center_lng, zoom = calculate_center_coordinates(filtered_data, state, district, mdo_name)
 
     filtered_data = filtered_data[start_index:end_index]
-    filtered_data_json = json.dumps(filtered_data)  
-    
-    return render_template('index1.html', data=filtered_data_json, center_lat=center_lat, center_lng=center_lng, zoom=zoom,items_per_page=items_per_page, page=page)
+    filtered_data_json = json.dumps(filtered_data)
 
+    return render_template(
+        'index1.html',
+        data=filtered_data_json,
+        center_lat=center_lat,
+        center_lng=center_lng,
+        zoom=zoom,
+        items_per_page=items_per_page,
+        page=page,
+        unique_states=(getUniqueStates(data)),
+        unique_districts=(getUniqueDistricts(data)),
+        unique_mdo_names=(getUniqueMdoNames(data))
+    )
+def getUniqueStates(data):
+    states = set()
+    for entry in data:
+        states.add(entry['State'])
+    return list(states)
+
+
+def getUniqueDistricts(data):
+    districts = set()
+    for entry in data:
+        districts.add(entry['District'])
+    return list(districts)
+
+
+def getUniqueMdoNames(data):
+    mdo_ids = set()
+    for entry in data:
+        mdo_ids.add(entry['MDO_Name'])
+    return list(mdo_ids)
 
 import csv
 @app.route('/save_validation', methods=['POST'])
@@ -175,7 +215,7 @@ def save_polygon_validation():
 
     farmer_id = request.form.get('farmer_id')
     field_id = request.form.get('field_id')
-    mdo_id = request.form.get('mdo_id')
+
     validation = request.form.get('validation')
     remark = request.form.get('remark')
 
@@ -270,14 +310,14 @@ def save_coordinates():
     json_data = df.fillna('').to_json(orient='records')
     return {'data': json_data, 'status': 'success', 'prompt': prompt}
 
-def calculate_center_coordinates(data, state=None, district=None,mdo_id=None):
+def calculate_center_coordinates(data, state=None, district=None,mdo_name=None):
     
     if district and district != 'All':
         filtered_data = [entry for entry in data if entry['District'] == district]
     elif state and state != 'All':
         filtered_data = [entry for entry in data if entry['State'] == state]
-    elif mdo_id and mdo_id != 'All':
-        filtered_data = [entry for entry in data if entry['MDO_ID'] == mdo_id]    
+    elif mdo_name and mdo_name != 'All':
+        filtered_data = [entry for entry in data if entry['MDO_Name'] == mdo_name]    
     else:
         filtered_data = data
     #print(filtered_data)

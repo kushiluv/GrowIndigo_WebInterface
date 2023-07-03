@@ -18,29 +18,35 @@
 
     <div id="filter-container">
       <form id="filter-form" action="{{ url_for('filter_polygons') }}" method="post">
-          <div class="mb-3">
-              <label for="state-select" class="form-label">State:</label>
-              <select id="state-select" name="state" class="form-select">
-                  <option value="All">All States</option>
-                  <!-- State options will be generated dynamically using JavaScript -->
-              </select>
-          </div>
-  
-          <div class="mb-3">
-              <label for="district-select" class="form-label">District:</label>
-              <select id="district-select" name="district" class="form-select">
-                  <option value="All">All Districts</option>
-                  <!-- District options will be generated dynamically based on the selected state using JavaScript -->
-              </select>
-          </div>
-  
-          <div class="mb-3">
-              <label for="mdo-select" class="form-label">MDO ID:</label>
-              <select id="mdo-select" name="mdo_id" class="form-select">
-                  <option value="All">All MDO IDs</option>
-                  <!-- MDO ID options will be generated dynamically using JavaScript -->
-              </select>
-          </div>
+        <div class="mb-3">
+            <label for="state-select" class="form-label">State:</label>
+            <select id="state-select" name="state" class="form-select">
+                <option value="All">All States</option>
+                {% for state in unique_states %}
+                    <option value="{{ state }}">{{ state }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="mb-3">
+            <label for="district-select" class="form-label">District:</label>
+            <select id="district-select" name="district" class="form-select">
+                <option value="All">All Districts</option>
+                {% for district in unique_districts %}
+                    <option value="{{ district }}">{{ district }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="mb-3">
+            <label for="mdo-select" class="form-label">MDO Name:</label>
+            <select id="mdo-select" name="mdo_name" class="form-select">
+                <option value="All">All MDO Names</option>
+                {% for mdo_name in unique_mdo_names %}
+                    <option value="{{ mdo_name }}">{{ mdo_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
           <div class="mb-3">
             <label for="start-date-input" class="form-label">Start Date:</label>
             <input type="date" id="start-date-input" name="start_date" class="form-control" placeholder="Start Date">
@@ -153,55 +159,62 @@ var drawControl = new L.Control.Draw({
                         }).addTo(map);
         // Add the tile layer to the map
         // Define the satellite tile layer
-                var satelliteTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                    attribution: 'Imagery © <a href="https://www.arcgis.com/">ArcGIS</a>'
-                });
+        var satelliteTileLayerGoogle = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    attribution: 'Imagery © <a href="https://www.google.com/maps">Google Maps</a>',
+    maxZoom: 25
+});
 
-                // Define the street tile layer
-                var streetTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
-                    maxZoom: 18
-                });
+// Define the ArcGIS satellite tile layer
+var satelliteTileLayerArcGIS = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Imagery © <a href="https://www.arcgis.com/">ArcGIS</a>',
+    maxZoom: 20
+});
 
-                // Define a base layer group to switch between tile layers
-                var baseLayers = {
-                    "Satellite View": satelliteTileLayer,
-                    "Map View": streetTileLayer
-                };
+// Define the street tile layer
+var streetTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+    maxZoom: 18
+});
 
-                // Set the satellite tile layer as the default layer
-                satelliteTileLayer.addTo(map);
+// Define a base layer group to switch between tile layers
+var baseLayers = {
+    "Google Satellite": satelliteTileLayerGoogle,
+    "ArcGIS Satellite": satelliteTileLayerArcGIS,
+    "Map View": streetTileLayer
+};
 
-                // Add the base layer control to the map
-                L.control.layers(baseLayers).addTo(map);
+// Set the Google Satellite layer as the default layer
+satelliteTileLayerGoogle.addTo(map);
+
+// Add the base layer control to the map
+L.control.layers(baseLayers).addTo(map);
 
         // Retrieve the data from the HTML data attribute
         var dataElement = document.getElementById('data');
         var data = JSON.parse(dataElement.getAttribute('data-value'));
 
         // Retrieve the filter selects
+// Retrieve the filter selects
+// Retrieve the filter selects
 var stateSelect = document.getElementById('state-select');
 var districtSelect = document.getElementById('district-select');
 var mdoIdSelect = document.getElementById('mdo-select');
 
-// Initialize the district and MDO_ID options based on the selected state
 stateSelect.addEventListener('change', function() {
     var selectedState = stateSelect.value;
     initializeDistrictOptions(selectedState);
 });
 
-// Initialize the district and MDO_ID options on page load
-initializeDistrictOptions(stateSelect.value);
+districtSelect.addEventListener('change', function() {
+    var selectedState = stateSelect.value;
+    var selectedDistrict = districtSelect.value;
+    initializeMdoIdOptions(selectedState, selectedDistrict);
+});
 
-// Function to initialize the district and MDO_ID options based on the selected state
 function initializeDistrictOptions(selectedState) {
-    // Retrieve the unique districts based on the selected state
-    var districts = getUniqueDistricts(selectedState);
-
     // Clear the existing district options
-    while (districtSelect.options.length > 0) {
-        districtSelect.options.remove(0);
-    }
+    districtSelect.innerHTML = '';
 
     // Add the "All Districts" option
     var allDistrictOption = document.createElement('option');
@@ -209,21 +222,26 @@ function initializeDistrictOptions(selectedState) {
     allDistrictOption.text = 'All Districts';
     districtSelect.appendChild(allDistrictOption);
 
-    // Add the district options
-    districts.forEach(function (district) {
-        var option = document.createElement('option');
-        option.value = district;
-        option.text = district;
-        districtSelect.appendChild(option);
+    // Retrieve the districts for the selected state from the HTML options
+    var districtOptions = document.querySelectorAll('#district-select option');
+    var districts = Array.from(districtOptions).map(function(option) {
+        return option.value;
     });
 
-    // Retrieve the unique MDO_IDs based on the selected state and district
-    var mdoIds = getUniqueMdoIds(selectedState, districtSelect.value);
-
-    // Clear the existing MDO_ID options
-    while (mdoIdSelect.options.length > 0) {
-        mdoIdSelect.options.remove(0);
+    // Add the district options
+    if (districts) {
+        districts.forEach(function (district) {
+            var option = document.createElement('option');
+            option.value = district;
+            option.text = district;
+            districtSelect.appendChild(option);
+        });
     }
+}
+
+function initializeMdoIdOptions(selectedState, selectedDistrict) {
+    // Clear the existing MDO_ID options
+    mdoIdSelect.innerHTML = '';
 
     // Add the "All MDO IDs" option
     var allMdoIdOption = document.createElement('option');
@@ -231,77 +249,31 @@ function initializeDistrictOptions(selectedState) {
     allMdoIdOption.text = 'All MDO IDs';
     mdoIdSelect.appendChild(allMdoIdOption);
 
+    // Retrieve the MDO IDs for the selected state and district from the HTML options
+    var mdoIdOptions = document.querySelectorAll('#mdo-select option');
+    var mdoIds = Array.from(mdoIdOptions).map(function(option) {
+        return option.value;
+    });
+
     // Add the MDO_ID options
-    mdoIds.forEach(function (mdoId) {
-        var option = document.createElement('option');
-        option.value = mdoId;
-        option.text = mdoId;
-        mdoIdSelect.appendChild(option);
-    });
-}
-
-// Retrieve the unique states from the data
-var states = getUniqueStates();
-
-// Add the state options
-states.forEach(function (state) {
-    var option = document.createElement('option');
-    option.value = state;
-    option.text = state;
-    stateSelect.appendChild(option);
-});
-
-// Function to retrieve the unique states from the data
-function getUniqueStates() {
-    var states = [];
-
-    data.forEach(function (entry) {
-        if (!states.includes(entry.State)) {
-            states.push(entry.State);
-        }
-    });
-
-    return states;
-}
-
-// Function to retrieve the unique districts based on the selected state
-function getUniqueDistricts(selectedState) {
-    var districts = [];
-
-    data.forEach(function (entry) {
-        if (selectedState === 'All' || entry.State === selectedState) {
-            if (!districts.includes(entry.District)) {
-                districts.push(entry.District);
-            }
-        }
-    });
-
-    return districts;
-}
-
-// Function to retrieve the unique MDO_IDs based on the selected state and district
-function getUniqueMdoIds(selectedState, selectedDistrict) {
-    var mdoIds = [];
-
-    data.forEach(function (entry) {
-        if ((selectedState === 'All' || entry.State === selectedState) &&
-            (selectedDistrict === 'All' || entry.District === selectedDistrict)) {
-            if (!mdoIds.includes(entry.MDO_ID)) {
-                mdoIds.push(entry.MDO_ID);
-            }
-        }
-    });
-
-    return mdoIds;
+    if (mdoIds) {
+        mdoIds.forEach(function (mdoId) {
+            var option = document.createElement('option');
+            option.value = mdoId;
+            option.text = mdoId;
+            mdoIdSelect.appendChild(option);
+        });
+    }
 }
 
 function toggleCollapse(elementId) {
-          const element = document.getElementById(elementId);
-          element.classList.toggle('show');
-          const expanded = element.classList.contains('show');
-          const button = document.querySelector(`[aria-controls="${elementId}"]`);
-          button.setAttribute('aria-expanded', expanded);
-        }
+    const element = document.getElementById(elementId);
+    element.classList.toggle('show');
+    const expanded = element.classList.contains('show');
+    const button = document.querySelector(`[aria-controls="${elementId}"]`);
+    button.setAttribute('aria-expanded', expanded);
+}
+
 function savePolygonValidation(farmerId, fieldId, mdoId) {
     // Retrieve the selected validation option and the entered remark
     var validationSelect = document.getElementById('validation-select');
@@ -506,10 +478,13 @@ var validatedPolygonsList = document.getElementById('validated-polygons-list');
             farmerId: entry.Farmer_ID,
             fieldId: entry['Field ID'],
             mdoId: entry.MDO_ID,
+            mdoName: entry.MDO_Name,
+            mdoNumber: entry.MDO_Number
         };
        
         // Append the buttons to the popup content
         var popupContentElement = document.createElement('div');
+        popupContentElement.className = 'custom-popup-content';
 popupContentElement.innerHTML = `
     <div class="popup-content">
         <h5 class="popup-heading">Polygon Details</h5>
@@ -528,6 +503,10 @@ popupContentElement.innerHTML = `
         <div class="form-group">
             <label for="field-id-input">Field ID:</label>
             <input id="field-id-input" class="form-control" value="${entry['Field ID']}" readonly>
+        </div>
+        <div class="form-group">
+            <label for="mdo-input">MDO:</label>
+            <input id="mdo-input" class="form-control" value="${entry.MDO_Name} (${entry.MDO_Number})" readonly>
         </div>
         <div class="form-group">
             <label for="mdo-id-input">MDO ID:</label>
