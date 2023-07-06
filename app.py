@@ -297,13 +297,13 @@ def save_coordinates():
         if str(entry['Farmer_ID']) == str(farmer_id) and str(entry['Field ID']) == str(field_id):
             entry['Coordinates'] = coordinates_str
             entry['Area'] = area
+            entry['Points'] = points  # Update the 'Points' field as well
 
 
-    
     # Check if the coordinates and area were successfully saved
-    saved_coordinates = df.loc[(df['Farmer_ID'] == farmer_id) & (df['Field ID'] == field_id), 'Coordinates'].values[0]
-    saved_area = df.loc[(df['Farmer_ID'] == farmer_id) & (df['Field ID'] == field_id), 'Area'].values[0]
-    if saved_coordinates == coordinates_str and saved_area == area:
+    saved_entry = next((entry for entry in data if str(entry['Farmer_ID']) == str(farmer_id) and str(entry['Field ID']) == str(field_id)), None)
+
+    if saved_entry is not None and saved_entry['Coordinates'] == coordinates_str and saved_entry['Area'] == area:
         prompt = 'Coordinates and area have been successfully saved.'
     else:
         prompt = 'Failed to save coordinates and area.'
