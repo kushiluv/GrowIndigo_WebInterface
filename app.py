@@ -61,14 +61,7 @@ for row in data:
 
                 coordinates = row['Points']
 
-                # # Compute the area using the coordinates
-                # if coordinates:
-                #     try:
-                #         area = calculate_area(coordinates)
-                #         area = area / 4046.856
-                #         row['Area'] = area
-                #     except ValueError:
-                #         print("Invalid coordinates for row:", row)
+    
 df['Area'] = [row['Area'] for row in data]
 
 

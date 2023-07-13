@@ -100,11 +100,11 @@
                 </div>
                 <div class="card-footer">
                   <div class="d-flex justify-content-end">
-                    <button id="save-to-file-button" type="button" class="btn btn-success" onclick="saveToFile('2')" style="display: none;">Save to File</button>
+                    <!-- <button id="save-to-file-button" type="button" class="btn btn-success" onclick="saveToFile('2')" style="display: none;">Save to File</button>
                     <select id="file-format-2" class="btn btn-secondary" style="display: none;">
                       <option value="csv">CSV</option>
                       <option value="excel">Excel</option>
-                    </select>
+                    </select> -->
                   </div>
                 </div>
               </div>
@@ -553,7 +553,8 @@ popupContentElement.innerHTML = `
         </div>
         <div class="form-group">
             <label for="remark-input">Remark:</label>
-            <textarea id="remark-input" class="form-control"></textarea>
+            <textarea id="remark-input" class="form-control">${entry.polygon_validation}, ${entry.validation_remark}</textarea>
+
         </div>
         <div class="button-group">
             <button class="btn btn-primary btn-save" onclick="savePolygonValidation('${entry.Farmer_ID}', '${entry['Field ID']}', '${entry.MDO_ID}')">Save Validation</button>
